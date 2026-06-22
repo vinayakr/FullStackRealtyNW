@@ -17,18 +17,25 @@ services:
       retries: 5
     restart: always
 
+  fluentd:
+    image: fluent/fluentd:v1.16-debian-1
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf:ro
+      - fluentd_buf:/fluentd/log
+    ports:
+      - "127.0.0.1:24224:24224"
+      - "127.0.0.1:24224:24224/udp"
+    environment:
+      SUMO_LOGIC_URL: ${SUMO_LOGIC_URL}
+      APP_ENV: ${APP_ENV:-production}
+    restart: always
+
   backend:
     build: ./backend
     environment:
-      # ── AWS Secrets Manager (production) ───────────────────────────────────
-      # Set FOO_SECRET to the secret name/ARN in AWS Secrets Manager.
-      # If FOO_SECRET is set, the app fetches the value from AWS at startup.
-      # If FOO is set instead, it is used as-is (local dev / simple deploys).
       AWS_REGION: ${AWS_REGION:-us-west-2}
       ANTHROPIC_API_KEY_SECRET: ${ANTHROPIC_API_KEY_SECRET:-}
       DATABASE_PASSWORD_SECRET: ${DATABASE_PASSWORD_SECRET:-}
-
-      # ── Direct values (local dev / non-secret config) ──────────────────────
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DATABASE_URL: jdbc:postgresql://postgres:5432/fullstackrealtynw
       DATABASE_USER: realty_user
@@ -36,6 +43,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      fluentd:
+        condition: service_started
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"       # don't block startup if fluentd is slow
+        tag: "fullstackrealtynw.backend"
     restart: always
 
   caddy:
@@ -43,17 +58,25 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"   # HTTP/3 (QUIC)
+      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./frontend/dist:/var/www/html:ro
-      - caddy_data:/data      # persists certs across restarts
+      - caddy_data:/data
       - caddy_config:/config
     depends_on:
       - backend
+      - fluentd
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "fullstackrealtynw.caddy"
     restart: always
 
 volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  fluentd_buf:

@@ -26,3 +26,6 @@ Thumbs.db
 # Caddy / certs (generated at runtime)
 caddy_data/
 caddy_config/
+
+# FluentD buffer files (generated at runtime)
+fluentd/log/
