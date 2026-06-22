@@ -1,0 +1,59 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: fullstackrealtynw
+      POSTGRES_USER: realty_user
+      POSTGRES_PASSWORD: realty_password
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/src/main/resources/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U realty_user -d fullstackrealtynw"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  backend:
+    build: ./backend
+    environment:
+      # ── AWS Secrets Manager (production) ───────────────────────────────────
+      # Set FOO_SECRET to the secret name/ARN in AWS Secrets Manager.
+      # If FOO_SECRET is set, the app fetches the value from AWS at startup.
+      # If FOO is set instead, it is used as-is (local dev / simple deploys).
+      AWS_REGION: ${AWS_REGION:-us-west-2}
+      ANTHROPIC_API_KEY_SECRET: ${ANTHROPIC_API_KEY_SECRET:-}
+      DATABASE_PASSWORD_SECRET: ${DATABASE_PASSWORD_SECRET:-}
+
+      # ── Direct values (local dev / non-secret config) ──────────────────────
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/fullstackrealtynw
+      DATABASE_USER: realty_user
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-realty_password}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (QUIC)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/var/www/html:ro
+      - caddy_data:/data      # persists certs across restarts
+      - caddy_config:/config
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

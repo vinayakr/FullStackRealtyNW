@@ -1,0 +1,28 @@
+# Gradle / Kotlin build
+.gradle/
+.kotlin/
+build/
+*.class
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/dist-server/
+.npm/
+
+# Environment
+.env
+*.env.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Caddy / certs (generated at runtime)
+caddy_data/
+caddy_config/

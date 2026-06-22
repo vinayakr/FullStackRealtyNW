@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans text-gray-900 bg-white;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg;
+  }
+
+  .btn-outline {
+    @apply inline-flex items-center gap-2 border-2 border-navy-700 text-navy-700 hover:bg-navy-700 hover:text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200;
+  }
+
+  .section-title {
+    @apply text-3xl md:text-4xl font-serif font-bold text-navy-900 mb-4;
+  }
+
+  .section-subtitle {
+    @apply text-lg text-gray-600 max-w-2xl;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden;
+  }
+}
+
+/* Chat scrollbar */
+.chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+/* Typing cursor animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.typing-cursor::after {
+  content: '▋';
+  animation: blink 0.7s infinite;
+  margin-left: 1px;
+}
+
+/* Prose styles for article content */
+.prose-realty h2 {
+  @apply text-2xl font-serif font-bold text-navy-900 mt-8 mb-4;
+}
+.prose-realty h3 {
+  @apply text-xl font-serif font-semibold text-navy-800 mt-6 mb-3;
+}
+.prose-realty p {
+  @apply text-gray-700 leading-relaxed mb-4;
+}
+.prose-realty ul {
+  @apply list-disc list-inside mb-4 space-y-1 text-gray-700;
+}
+.prose-realty ol {
+  @apply list-decimal list-inside mb-4 space-y-1 text-gray-700;
+}
+.prose-realty strong {
+  @apply font-semibold text-gray-900;
+}
+.prose-realty table {
+  @apply w-full border-collapse mb-6 text-sm;
+}
+.prose-realty th {
+  @apply bg-navy-800 text-white px-4 py-2 text-left font-semibold;
+}
+.prose-realty td {
+  @apply border border-gray-200 px-4 py-2;
+}
+.prose-realty tr:nth-child(even) td {
+  @apply bg-gray-50;
+}
+.prose-realty a {
+  @apply text-gold-600 hover:text-gold-700 underline;
+}
+.prose-realty blockquote {
+  @apply border-l-4 border-gold-400 pl-4 italic text-gray-600 my-4;
+}

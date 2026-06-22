@@ -1,0 +1,38 @@
+{
+    email vinny@fullstackrealtynw.com
+}
+
+fullstackrealtynw.com, www.fullstackrealtynw.com {
+    encode gzip zstd
+
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        -Server
+    }
+
+    # Proxy API calls to Kotlin backend
+    handle /api/* {
+        reverse_proxy backend:8080 {
+            flush_interval -1   # required for SSE streaming (chat)
+        }
+    }
+
+    handle /health {
+        reverse_proxy backend:8080
+    }
+
+    # Serve Vite build with SPA fallback
+    handle {
+        root * /var/www/html
+
+        # Vite fingerprints asset filenames — cache them forever
+        @fingerprinted path /assets/*
+        header @fingerprinted Cache-Control "public, max-age=31536000, immutable"
+
+        try_files {path} /index.html
+        file_server
+    }
+}
