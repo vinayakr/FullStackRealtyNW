@@ -45,6 +45,7 @@ dependencies {
 
     // Logging
     implementation("ch.qos.logback:logback-classic:$logback_version")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
 
     // Database
     implementation("org.postgresql:postgresql:42.7.3")
