@@ -12,6 +12,10 @@ services:
       APP_ENV: ${APP_ENV:-production}
     restart: always
 
+  postgres:
+    environment:
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-realty_password}
+
   backend:
     volumes:
       - ~/.aws:/root/.aws:ro
