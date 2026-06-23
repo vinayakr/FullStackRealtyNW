@@ -10,8 +10,9 @@ frontend/dist/
 frontend/dist-server/
 .npm/
 
-# Environment
+# Environment — never commit real credentials
 .env
+.env.prod
 *.env.local
 
 # IDE

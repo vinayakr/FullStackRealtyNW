@@ -5,13 +5,28 @@
 # Run this for every deployment after the first SSL bootstrap.
 #
 # Usage:
-#   ./scripts/deploy.sh
+#   ./scripts/deploy.sh              # uses .env.prod
+#   ./scripts/deploy.sh --env .env   # override env file
 
 set -euo pipefail
 
 BOLD='\033[1m'; GREEN='\033[0;32m'; RESET='\033[0m'
+ENV_FILE=".env.prod"
 
-echo -e "${BOLD}=== Full Stack Realty NW — Deploy ===${RESET}"
+# Allow overriding the env file: ./scripts/deploy.sh --env .env.staging
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --env) ENV_FILE="$2"; shift 2 ;;
+        *) echo "Unknown argument: $1"; exit 1 ;;
+    esac
+done
+
+if [[ ! -f "$ENV_FILE" ]]; then
+    echo "Error: env file '$ENV_FILE' not found." >&2
+    exit 1
+fi
+
+echo -e "${BOLD}=== Full Stack Realty NW — Deploy (${ENV_FILE}) ===${RESET}"
 
 # ── Build frontend ─────────────────────────────────────────────────────────────
 echo ""
@@ -33,8 +48,8 @@ echo -e "${GREEN}✓ Backend jar built${RESET}"
 # ── Start / update services ────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}[3/3] Starting services...${RESET}"
-docker compose up -d --build
+docker compose --env-file "$ENV_FILE" up -d --build
 
 echo ""
 echo -e "${GREEN}${BOLD}✓ Deployment complete${RESET}"
-docker compose ps
+docker compose --env-file "$ENV_FILE" ps
