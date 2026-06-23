@@ -11,74 +11,62 @@ import kotlinx.serialization.json.*
 import org.slf4j.LoggerFactory
 
 private const val SYSTEM_PROMPT = """
-You are a knowledgeable and warm real estate advisor for Full Stack Realty NW, led by Vinny Rao — a licensed real estate agent AND active real estate investor in the Pacific Northwest.
+You are a warm, knowledgeable home advisor for Full Stack Realty NW, led by Vinny Rao — a licensed agent and active real estate investor in the Pacific Northwest.
 
-Your goal is to have a natural, friendly conversation to understand what the user is looking for in a home, then provide thoughtful, personalized recommendations.
+YOUR GOAL: Have a natural conversation to understand exactly what the client is looking for, then collect their contact info so Vinny can personally send them curated listings.
 
 CONVERSATION FLOW:
-1. Start with a warm greeting and ask about their family situation or real estate goal (buying, selling, or investing)
-2. Based on their answer, ask targeted follow-up questions — ONE question at a time, not a list
-3. Gather key information naturally through conversation:
-   - Family size and ages (especially children for school considerations)
-   - Budget range (comfortable monthly payment or purchase price)
-   - Timeline (when they need to move)
-   - Work location and commute preferences
+1. Warm greeting — ask what brings them here today (buying, selling, or investing)
+2. Ask follow-up questions ONE AT A TIME to build a clear picture:
+   - Family situation (size, ages of kids — important for schools)
+   - Budget (purchase price or comfortable monthly payment)
+   - Preferred area or neighborhoods
    - Must-have features (bedrooms, yard, garage, home office, etc.)
-   - Lifestyle priorities (walkability, nature access, schools, nightlife, etc.)
-   - Whether they're renting now or own a home to sell
-4. Once you have location, budget, and minimum bedrooms — call the search_listings tool to fetch real listings.
-5. Present the listings naturally: describe each one, why it fits their needs, and invite them to schedule a tour.
+   - Timeline — when do they need to be in a place?
+   - Current situation — renting, own a home to sell?
+   - Commute or work location
+   - Lifestyle priorities (walkability, schools, outdoor access, etc.)
+3. After 4–6 exchanges when you have a solid picture, say something like:
+   "I have a great sense of what you're looking for. Vinny personally curates listings for each client — can I grab your name and best email so he can send you some options?"
+4. Ask for phone number too: "And a phone number in case he wants to reach out quickly?"
+5. Once you have name + email (phone optional), call the capture_lead tool.
+6. After the tool runs, tell them: "Perfect — Vinny will review your profile and send you some curated options within 24 hours. Feel free to reach out to him directly at vinny@fullstackrealtynw.com if you have questions in the meantime."
 
-KEY POINTS TO WEAVE IN NATURALLY:
-- Full Stack Realty NW charges just 2% listing commission (vs. the typical 3%), saving sellers thousands
-- Vinny's background as a real estate investor gives clients unique insight into property value and investment potential
-- Vinny can be reached at vinny@fullstackrealtynw.com
+KEY FACTS TO WEAVE IN NATURALLY:
+- Full Stack Realty NW charges 2% listing commission vs. the typical 3% — saves sellers thousands
+- Vinny is both a licensed agent AND an active investor, giving clients unique market insight
+- Direct contact: vinny@fullstackrealtynw.com
 
 STYLE:
-- Be conversational and warm, not robotic or salesy
-- Ask one focused question at a time to keep the conversation flowing naturally
-- Use specific Pacific Northwest neighborhood knowledge
-- Be honest about market conditions
-
-Remember: You are having a conversation, not filling out a form. Let it flow naturally.
+- Conversational and warm, never robotic or salesy
+- One question at a time — never fire a list of questions
+- Be genuinely curious about their situation
+- If they ask about price ranges or neighborhoods, give real, specific PNW knowledge
 """
 
-private val LISTING_TOOL = buildJsonObject {
-    put("name", "search_listings")
-    put("description", "Search for active real estate listings matching the buyer's criteria. Call this once you have gathered location, maximum budget, and minimum bedrooms from the conversation.")
+private val CAPTURE_LEAD_TOOL = buildJsonObject {
+    put("name", "capture_lead")
+    put("description", "Save the client's contact information and home search profile, then notify Vinny so he can follow up with curated listings. Call this once you have their name, email, and a good understanding of what they're looking for.")
     putJsonObject("input_schema") {
         put("type", "object")
         putJsonObject("properties") {
-            putJsonObject("location") {
-                put("type", "string")
-                put("description", "City or neighborhood in the Pacific Northwest, e.g. 'Kirkland WA' or 'Bellevue WA'")
-            }
-            putJsonObject("price_min") {
-                put("type", "integer")
-                put("description", "Minimum listing price in dollars")
-            }
-            putJsonObject("price_max") {
-                put("type", "integer")
-                put("description", "Maximum listing price in dollars")
-            }
-            putJsonObject("beds_min") {
-                put("type", "integer")
-                put("description", "Minimum number of bedrooms")
-            }
-            putJsonObject("baths_min") {
-                put("type", "number")
-                put("description", "Minimum number of bathrooms")
-            }
+            putJsonObject("name")     { put("type", "string"); put("description", "Client's full name") }
+            putJsonObject("email")    { put("type", "string"); put("description", "Client's email address") }
+            putJsonObject("phone")    { put("type", "string"); put("description", "Client's phone number (optional)") }
+            putJsonObject("summary")  { put("type", "string"); put("description", "2–3 sentence summary of what they're looking for, written for Vinny") }
+            putJsonObject("budget")   { put("type", "string"); put("description", "Their budget range") }
+            putJsonObject("location") { put("type", "string"); put("description", "Preferred area or neighborhoods") }
+            putJsonObject("bedrooms") { put("type", "string"); put("description", "Bedroom requirements") }
+            putJsonObject("timeline") { put("type", "string"); put("description", "When they need to move") }
+            putJsonObject("additional_notes") { put("type", "string"); put("description", "Anything else Vinny should know — family situation, must-haves, dealbreakers") }
         }
-        putJsonArray("required") {
-            add("location"); add("price_max"); add("beds_min")
-        }
+        putJsonArray("required") { add("name"); add("email"); add("summary") }
     }
 }
 
 class AnthropicService(
     private val apiKey: String,
-    private val toolExecutor: (suspend (JsonObject) -> String)? = null,
+    private val toolExecutor: (suspend (String, JsonObject) -> String)? = null,
 ) {
     private val logger = LoggerFactory.getLogger(AnthropicService::class.java)
     private val client = HttpClient(CIO) {
@@ -106,7 +94,7 @@ class AnthropicService(
         if (apiKey.isBlank()) {
             val fallback = "I'd love to help you find your perfect Pacific Northwest home! " +
                 "Unfortunately, the AI service isn't configured yet. " +
-                "Please contact Vinny directly at vinny@fullstackrealtynw.com to get started."
+                "Please contact Vinny directly at vinny@fullstackrealtynw.com."
             onChunk(fallback); onComplete(fallback); return
         }
 
@@ -116,18 +104,17 @@ class AnthropicService(
             put("stream", true)
             put("system", SYSTEM_PROMPT)
             put("messages", buildJsonArray { messages.forEach { add(it) } })
-            if (withTools) put("tools", buildJsonArray { add(LISTING_TOOL) })
+            if (withTools) put("tools", buildJsonArray { add(CAPTURE_LEAD_TOOL) })
         }
 
-        // Streaming state machine
         var currentBlockType = ""
-        var currentToolId = ""
-        var currentToolName = ""
-        val toolInputJson = StringBuilder()
-        val assistantTextBeforeTool = StringBuilder()
-        val fullText = StringBuilder()
-        val lineBuffer = StringBuilder()
-        var stopReason = ""
+        var currentToolId    = ""
+        var currentToolName  = ""
+        val toolInputJson            = StringBuilder()
+        val assistantTextBeforeTool  = StringBuilder()
+        val fullText                 = StringBuilder()
+        val lineBuffer               = StringBuilder()
+        var stopReason               = ""
 
         try {
             val response = client.post("https://api.anthropic.com/v1/messages") {
@@ -147,6 +134,7 @@ class AnthropicService(
                 if (available == 0) { channel.awaitContent(); continue }
                 val bytes = ByteArray(available)
                 channel.readFully(bytes, 0, available)
+
                 for (char in bytes.toString(Charsets.UTF_8)) {
                     if (char == '\n') {
                         val line = lineBuffer.toString(); lineBuffer.clear()
@@ -155,8 +143,8 @@ class AnthropicService(
                         if (data == "[DONE]" || data.isEmpty()) continue
 
                         val event = try { Json.parseToJsonElement(data).jsonObject } catch (_: Exception) { continue }
-                        when (event["type"]?.jsonPrimitive?.content) {
 
+                        when (event["type"]?.jsonPrimitive?.content) {
                             "content_block_start" -> {
                                 val block = event["content_block"]?.jsonObject ?: continue
                                 currentBlockType = block["type"]?.jsonPrimitive?.content ?: ""
@@ -166,7 +154,6 @@ class AnthropicService(
                                     toolInputJson.clear()
                                 }
                             }
-
                             "content_block_delta" -> {
                                 val delta = event["delta"]?.jsonObject ?: continue
                                 when (delta["type"]?.jsonPrimitive?.content) {
@@ -176,12 +163,10 @@ class AnthropicService(
                                         assistantTextBeforeTool.append(text)
                                         onChunk(text)
                                     }
-                                    "input_json_delta" -> {
+                                    "input_json_delta" ->
                                         toolInputJson.append(delta["partial_json"]?.jsonPrimitive?.content ?: "")
-                                    }
                                 }
                             }
-
                             "message_delta" -> {
                                 stopReason = event["delta"]?.jsonObject
                                     ?.get("stop_reason")?.jsonPrimitive?.content ?: ""
@@ -193,14 +178,17 @@ class AnthropicService(
                 }
             }
 
-            if (stopReason == "tool_use" && withTools && toolExecutor != null && currentToolName == "search_listings") {
-                val toolInput = try { Json.parseToJsonElement(toolInputJson.toString()).jsonObject }
-                    catch (_: Exception) { buildJsonObject {} }
+            if (stopReason == "tool_use" && withTools && toolExecutor != null) {
+                val toolInput = try {
+                    Json.parseToJsonElement(toolInputJson.toString()).jsonObject
+                } catch (_: Exception) { buildJsonObject {} }
 
-                val toolResult = try { toolExecutor(toolInput) }
-                    catch (e: Exception) { "Error fetching listings: ${e.message}" }
+                val toolResult = try {
+                    toolExecutor(currentToolName, toolInput)
+                } catch (e: Exception) {
+                    "Tool error: ${e.message}"
+                }
 
-                // Build follow-up messages including the tool result
                 val assistantContent = buildJsonArray {
                     if (assistantTextBeforeTool.isNotEmpty()) addJsonObject {
                         put("type", "text"); put("text", assistantTextBeforeTool.toString())
@@ -212,6 +200,7 @@ class AnthropicService(
                         put("input", toolInput)
                     }
                 }
+
                 val followUpMessages = messages + listOf(
                     buildJsonObject { put("role", "assistant"); put("content", assistantContent) },
                     buildJsonObject {
@@ -225,11 +214,11 @@ class AnthropicService(
                         })
                     }
                 )
-                // Second streaming call — no tools to avoid loops
                 streamInternal(followUpMessages, onChunk, onComplete, withTools = false)
             } else {
                 onComplete(fullText.toString())
             }
+
         } catch (e: Exception) {
             logger.error("Anthropic API error", e)
             val errorMsg = "I'm having trouble connecting right now. " +

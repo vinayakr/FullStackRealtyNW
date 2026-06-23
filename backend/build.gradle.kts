@@ -59,9 +59,10 @@ dependencies {
     // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
-    // AWS Secrets Manager
+    // AWS
     implementation(platform("software.amazon.awssdk:bom:2.26.0"))
     implementation("software.amazon.awssdk:secretsmanager")
+    implementation("software.amazon.awssdk:sesv2")
     implementation("software.amazon.awssdk:url-connection-client")
 
     // Testing
