@@ -1,35 +1,35 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-CREATE TABLE IF NOT EXISTS articles (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    slug VARCHAR(255) UNIQUE NOT NULL,
-    excerpt TEXT,
-    content TEXT NOT NULL,
-    author VARCHAR(100) DEFAULT 'Vinny Rao',
-    category VARCHAR(100),
-    image_url VARCHAR(500),
+CREATE TABLE articles (
+    id                SERIAL PRIMARY KEY,
+    title             VARCHAR(255) NOT NULL,
+    slug              VARCHAR(255) UNIQUE NOT NULL,
+    excerpt           TEXT,
+    content           TEXT NOT NULL,
+    author            VARCHAR(100) DEFAULT 'Vinny Rao',
+    category          VARCHAR(100),
+    image_url         VARCHAR(500),
     read_time_minutes INTEGER DEFAULT 5,
-    published_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    published_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE chat_sessions (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS chat_sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS chat_messages (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE chat_messages (
+    id         SERIAL PRIMARY KEY,
     session_id UUID REFERENCES chat_sessions(id) ON DELETE CASCADE,
-    role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant')),
-    content TEXT NOT NULL,
+    role       VARCHAR(20) NOT NULL CHECK (role IN ('user', 'assistant')),
+    content    TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
-CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
-CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category);
+CREATE INDEX idx_chat_messages_session_id ON chat_messages(session_id);
+CREATE INDEX idx_articles_slug            ON articles(slug);
+CREATE INDEX idx_articles_category        ON articles(category);
 
 INSERT INTO articles (title, slug, excerpt, content, category, read_time_minutes) VALUES
 (

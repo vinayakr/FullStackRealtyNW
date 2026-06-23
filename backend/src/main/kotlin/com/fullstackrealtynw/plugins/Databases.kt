@@ -1,15 +1,11 @@
 package com.fullstackrealtynw.plugins
 
-import com.fullstackrealtynw.models.Articles
-import com.fullstackrealtynw.models.ChatMessages
-import com.fullstackrealtynw.models.ChatSessions
 import com.fullstackrealtynw.secrets.SecretsLoader
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.application.*
+import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Application.configureDatabases() {
     val dbUrl = SecretsLoader.resolve("DATABASE_URL", "jdbc:postgresql://localhost:5432/fullstackrealtynw")
@@ -28,12 +24,14 @@ fun Application.configureDatabases() {
     }
 
     val dataSource = HikariDataSource(config)
+
+    Flyway.configure()
+        .dataSource(dataSource)
+        .locations("classpath:db/migration")
+        .load()
+        .migrate()
+
     Database.connect(dataSource)
 
-    // Ensure tables exist (init.sql handles seeding via Docker, but this handles schema for non-Docker)
-    transaction {
-        SchemaUtils.createMissingTablesAndColumns(Articles, ChatSessions, ChatMessages)
-    }
-
-    log.info("Database connected: $dbUrl")
+    log.info("Database connected and migrations applied: $dbUrl")
 }
