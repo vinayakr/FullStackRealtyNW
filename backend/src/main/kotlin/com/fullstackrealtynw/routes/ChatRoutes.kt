@@ -77,11 +77,17 @@ fun Route.chatRoutes(chatService: ChatService) {
                     }
                     write("data: [DONE]\n\n")
                     flush()
+                } catch (_: java.io.IOException) {
+                    // Client disconnected mid-stream — stop silently, no crash
                 } catch (e: Exception) {
-                    val errData = Json.encodeToString(buildJsonObject { put("error", e.message ?: "Stream error") })
-                    write("data: $errData\n\n")
-                    write("data: [DONE]\n\n")
-                    flush()
+                    try {
+                        val errData = Json.encodeToString(buildJsonObject { put("error", e.message ?: "Stream error") })
+                        write("data: $errData\n\n")
+                        write("data: [DONE]\n\n")
+                        flush()
+                    } catch (_: Exception) {
+                        // Channel already closed, can't send error to client
+                    }
                 }
             }
         }

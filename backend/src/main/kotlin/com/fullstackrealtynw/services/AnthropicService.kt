@@ -133,8 +133,12 @@ class AnthropicService(private val apiKey: String) {
             logger.error("Anthropic API error", e)
             val errorMsg = "I'm having trouble connecting right now. " +
                 "Please try again or reach out to Vinny at vinny@fullstackrealtynw.com."
-            onChunk(errorMsg)
-            onComplete(errorMsg)
+            try {
+                onChunk(errorMsg)
+                onComplete(errorMsg)
+            } catch (_: Exception) {
+                // Client already disconnected, nothing to send
+            }
         }
     }
 
