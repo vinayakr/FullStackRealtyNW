@@ -1,23 +1,44 @@
 package com.fullstackrealtynw.plugins
 
+import com.fullstackrealtynw.models.ListingSearchParams
 import com.fullstackrealtynw.routes.articleRoutes
 import com.fullstackrealtynw.routes.chatRoutes
 import com.fullstackrealtynw.secrets.SecretsLoader
 import com.fullstackrealtynw.services.AnthropicService
 import com.fullstackrealtynw.services.ArticleService
 import com.fullstackrealtynw.services.ChatService
+import com.fullstackrealtynw.services.ListingsService
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.*
 
 fun Application.configureRouting() {
     install(SSE)
 
     val anthropicApiKey = SecretsLoader.resolve("ANTHROPIC_API_KEY", "")
-    val anthropicService = AnthropicService(anthropicApiKey)
+    val rapidApiKey     = SecretsLoader.resolve("RAPIDAPI_KEY", "dummy")
+    val listingsService = ListingsService(rapidApiKey)
+
+    val anthropicService = AnthropicService(
+        apiKey = anthropicApiKey,
+        toolExecutor = { toolInput ->
+            val params = ListingSearchParams(
+                location  = toolInput["location"]?.jsonPrimitive?.content ?: "",
+                priceMin  = toolInput["price_min"]?.jsonPrimitive?.intOrNull,
+                priceMax  = toolInput["price_max"]?.jsonPrimitive?.intOrNull,
+                bedsMin   = toolInput["beds_min"]?.jsonPrimitive?.intOrNull ?: 1,
+                bathsMin  = toolInput["baths_min"]?.jsonPrimitive?.doubleOrNull,
+            )
+            val listings = listingsService.search(params)
+            Json.encodeToString(listings)
+        }
+    )
+
     val articleService = ArticleService()
-    val chatService = ChatService(anthropicService)
+    val chatService    = ChatService(anthropicService)
 
     routing {
         get("/health") {

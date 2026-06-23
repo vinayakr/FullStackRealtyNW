@@ -26,12 +26,8 @@ CONVERSATION FLOW:
    - Must-have features (bedrooms, yard, garage, home office, etc.)
    - Lifestyle priorities (walkability, nature access, schools, nightlife, etc.)
    - Whether they're renting now or own a home to sell
-4. After gathering enough context (typically 4-6 exchanges), provide specific recommendations:
-   - Specific neighborhoods or cities in the Pacific Northwest that match their needs
-   - Why each neighborhood fits their profile
-   - Realistic price ranges in those areas
-   - Tips for their specific situation
-   - Offer to schedule a free consultation with Vinny
+4. Once you have location, budget, and minimum bedrooms — call the search_listings tool to fetch real listings.
+5. Present the listings naturally: describe each one, why it fits their needs, and invite them to schedule a tour.
 
 KEY POINTS TO WEAVE IN NATURALLY:
 - Full Stack Realty NW charges just 2% listing commission (vs. the typical 3%), saving sellers thousands
@@ -43,17 +39,50 @@ STYLE:
 - Ask one focused question at a time to keep the conversation flowing naturally
 - Use specific Pacific Northwest neighborhood knowledge
 - Be honest about market conditions
-- If asked about price, be specific with real market data where possible
 
 Remember: You are having a conversation, not filling out a form. Let it flow naturally.
 """
 
-class AnthropicService(private val apiKey: String) {
+private val LISTING_TOOL = buildJsonObject {
+    put("name", "search_listings")
+    put("description", "Search for active real estate listings matching the buyer's criteria. Call this once you have gathered location, maximum budget, and minimum bedrooms from the conversation.")
+    putJsonObject("input_schema") {
+        put("type", "object")
+        putJsonObject("properties") {
+            putJsonObject("location") {
+                put("type", "string")
+                put("description", "City or neighborhood in the Pacific Northwest, e.g. 'Kirkland WA' or 'Bellevue WA'")
+            }
+            putJsonObject("price_min") {
+                put("type", "integer")
+                put("description", "Minimum listing price in dollars")
+            }
+            putJsonObject("price_max") {
+                put("type", "integer")
+                put("description", "Maximum listing price in dollars")
+            }
+            putJsonObject("beds_min") {
+                put("type", "integer")
+                put("description", "Minimum number of bedrooms")
+            }
+            putJsonObject("baths_min") {
+                put("type", "number")
+                put("description", "Minimum number of bathrooms")
+            }
+        }
+        putJsonArray("required") {
+            add("location"); add("price_max"); add("beds_min")
+        }
+    }
+}
+
+class AnthropicService(
+    private val apiKey: String,
+    private val toolExecutor: (suspend (JsonObject) -> String)? = null,
+) {
     private val logger = LoggerFactory.getLogger(AnthropicService::class.java)
     private val client = HttpClient(CIO) {
-        engine {
-            requestTimeout = 120_000
-        }
+        engine { requestTimeout = 120_000 }
     }
 
     suspend fun streamCompletion(
@@ -61,22 +90,24 @@ class AnthropicService(private val apiKey: String) {
         onChunk: suspend (String) -> Unit,
         onComplete: suspend (String) -> Unit,
     ) {
+        val apiMessages = messages.map { buildJsonObject {
+            put("role", it.role)
+            put("content", it.content)
+        }}
+        streamInternal(apiMessages, onChunk, onComplete, withTools = toolExecutor != null)
+    }
+
+    private suspend fun streamInternal(
+        messages: List<JsonObject>,
+        onChunk: suspend (String) -> Unit,
+        onComplete: suspend (String) -> Unit,
+        withTools: Boolean,
+    ) {
         if (apiKey.isBlank()) {
             val fallback = "I'd love to help you find your perfect Pacific Northwest home! " +
                 "Unfortunately, the AI service isn't configured yet. " +
                 "Please contact Vinny directly at vinny@fullstackrealtynw.com to get started."
-            onChunk(fallback)
-            onComplete(fallback)
-            return
-        }
-
-        val requestMessages = buildJsonArray {
-            for (msg in messages) {
-                addJsonObject {
-                    put("role", msg.role)
-                    put("content", msg.content)
-                }
-            }
+            onChunk(fallback); onComplete(fallback); return
         }
 
         val requestBody = buildJsonObject {
@@ -84,8 +115,19 @@ class AnthropicService(private val apiKey: String) {
             put("max_tokens", 1024)
             put("stream", true)
             put("system", SYSTEM_PROMPT)
-            put("messages", requestMessages)
+            put("messages", buildJsonArray { messages.forEach { add(it) } })
+            if (withTools) put("tools", buildJsonArray { add(LISTING_TOOL) })
         }
+
+        // Streaming state machine
+        var currentBlockType = ""
+        var currentToolId = ""
+        var currentToolName = ""
+        val toolInputJson = StringBuilder()
+        val assistantTextBeforeTool = StringBuilder()
+        val fullText = StringBuilder()
+        val lineBuffer = StringBuilder()
+        var stopReason = ""
 
         try {
             val response = client.post("https://api.anthropic.com/v1/messages") {
@@ -99,70 +141,100 @@ class AnthropicService(private val apiKey: String) {
             }
 
             val channel: ByteReadChannel = response.bodyAsChannel()
-            val fullText = StringBuilder()
-            val lineBuffer = StringBuilder()
 
             while (!channel.isClosedForRead) {
                 val available = channel.availableForRead
-                if (available == 0) {
-                    channel.awaitContent()
-                    continue
-                }
+                if (available == 0) { channel.awaitContent(); continue }
                 val bytes = ByteArray(available)
                 channel.readFully(bytes, 0, available)
-                val text = bytes.toString(Charsets.UTF_8)
-
-                for (char in text) {
+                for (char in bytes.toString(Charsets.UTF_8)) {
                     if (char == '\n') {
-                        val line = lineBuffer.toString()
-                        lineBuffer.clear()
-                        processLine(line, fullText, onChunk)
+                        val line = lineBuffer.toString(); lineBuffer.clear()
+                        if (!line.startsWith("data: ")) continue
+                        val data = line.removePrefix("data: ").trim()
+                        if (data == "[DONE]" || data.isEmpty()) continue
+
+                        val event = try { Json.parseToJsonElement(data).jsonObject } catch (_: Exception) { continue }
+                        when (event["type"]?.jsonPrimitive?.content) {
+
+                            "content_block_start" -> {
+                                val block = event["content_block"]?.jsonObject ?: continue
+                                currentBlockType = block["type"]?.jsonPrimitive?.content ?: ""
+                                if (currentBlockType == "tool_use") {
+                                    currentToolId   = block["id"]?.jsonPrimitive?.content ?: ""
+                                    currentToolName = block["name"]?.jsonPrimitive?.content ?: ""
+                                    toolInputJson.clear()
+                                }
+                            }
+
+                            "content_block_delta" -> {
+                                val delta = event["delta"]?.jsonObject ?: continue
+                                when (delta["type"]?.jsonPrimitive?.content) {
+                                    "text_delta" -> {
+                                        val text = delta["text"]?.jsonPrimitive?.content ?: ""
+                                        fullText.append(text)
+                                        assistantTextBeforeTool.append(text)
+                                        onChunk(text)
+                                    }
+                                    "input_json_delta" -> {
+                                        toolInputJson.append(delta["partial_json"]?.jsonPrimitive?.content ?: "")
+                                    }
+                                }
+                            }
+
+                            "message_delta" -> {
+                                stopReason = event["delta"]?.jsonObject
+                                    ?.get("stop_reason")?.jsonPrimitive?.content ?: ""
+                            }
+                        }
                     } else {
                         lineBuffer.append(char)
                     }
                 }
             }
 
-            // flush remaining buffer
-            if (lineBuffer.isNotEmpty()) {
-                processLine(lineBuffer.toString(), fullText, onChunk)
-            }
+            if (stopReason == "tool_use" && withTools && toolExecutor != null && currentToolName == "search_listings") {
+                val toolInput = try { Json.parseToJsonElement(toolInputJson.toString()).jsonObject }
+                    catch (_: Exception) { buildJsonObject {} }
 
-            onComplete(fullText.toString())
+                val toolResult = try { toolExecutor(toolInput) }
+                    catch (e: Exception) { "Error fetching listings: ${e.message}" }
+
+                // Build follow-up messages including the tool result
+                val assistantContent = buildJsonArray {
+                    if (assistantTextBeforeTool.isNotEmpty()) addJsonObject {
+                        put("type", "text"); put("text", assistantTextBeforeTool.toString())
+                    }
+                    addJsonObject {
+                        put("type", "tool_use")
+                        put("id", currentToolId)
+                        put("name", currentToolName)
+                        put("input", toolInput)
+                    }
+                }
+                val followUpMessages = messages + listOf(
+                    buildJsonObject { put("role", "assistant"); put("content", assistantContent) },
+                    buildJsonObject {
+                        put("role", "user")
+                        put("content", buildJsonArray {
+                            addJsonObject {
+                                put("type", "tool_result")
+                                put("tool_use_id", currentToolId)
+                                put("content", toolResult)
+                            }
+                        })
+                    }
+                )
+                // Second streaming call — no tools to avoid loops
+                streamInternal(followUpMessages, onChunk, onComplete, withTools = false)
+            } else {
+                onComplete(fullText.toString())
+            }
         } catch (e: Exception) {
             logger.error("Anthropic API error", e)
             val errorMsg = "I'm having trouble connecting right now. " +
                 "Please try again or reach out to Vinny at vinny@fullstackrealtynw.com."
-            try {
-                onChunk(errorMsg)
-                onComplete(errorMsg)
-            } catch (_: Exception) {
-                // Client already disconnected, nothing to send
-            }
-        }
-    }
-
-    private suspend fun processLine(
-        line: String,
-        fullText: StringBuilder,
-        onChunk: suspend (String) -> Unit,
-    ) {
-        if (!line.startsWith("data: ")) return
-        val data = line.removePrefix("data: ").trim()
-        if (data == "[DONE]") return
-
-        try {
-            val parsed = Json.parseToJsonElement(data).jsonObject
-            val type = parsed["type"]?.jsonPrimitive?.content ?: return
-            if (type == "content_block_delta") {
-                val text = parsed["delta"]?.jsonObject?.get("text")?.jsonPrimitive?.content
-                if (text != null) {
-                    fullText.append(text)
-                    onChunk(text)
-                }
-            }
-        } catch (_: Exception) {
-            // Skip unparseable events
+            try { onChunk(errorMsg); onComplete(errorMsg) } catch (_: Exception) {}
         }
     }
 
