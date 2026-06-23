@@ -24,6 +24,11 @@ services:
         tag: "fullstackrealtynw.backend"
 
   caddy:
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/var/www/html:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - fluentd
     logging:

@@ -1,0 +1,20 @@
+# Local development — no SSL, no domain, plain HTTP on port 80
+:80 {
+    encode gzip
+
+    handle /api/* {
+        reverse_proxy backend:8080 {
+            flush_interval -1
+        }
+    }
+
+    handle /health {
+        reverse_proxy backend:8080
+    }
+
+    handle {
+        root * /var/www/html
+        try_files {path} /index.html
+        file_server
+    }
+}
