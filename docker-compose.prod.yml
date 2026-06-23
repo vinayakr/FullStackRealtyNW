@@ -1,0 +1,37 @@
+services:
+  fluentd:
+    image: fluent/fluentd:v1.16-debian-1
+    volumes:
+      - ./fluentd/fluent.conf:/fluentd/etc/fluent.conf:ro
+      - fluentd_buf:/fluentd/log
+    ports:
+      - "127.0.0.1:24224:24224"
+      - "127.0.0.1:24224:24224/udp"
+    environment:
+      SUMO_LOGIC_URL: ${SUMO_LOGIC_URL}
+      APP_ENV: ${APP_ENV:-production}
+    restart: always
+
+  backend:
+    depends_on:
+      fluentd:
+        condition: service_started
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "fullstackrealtynw.backend"
+
+  caddy:
+    depends_on:
+      - fluentd
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        fluentd-async: "true"
+        tag: "fullstackrealtynw.caddy"
+
+volumes:
+  fluentd_buf:

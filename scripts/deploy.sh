@@ -48,8 +48,8 @@ echo -e "${GREEN}✓ Backend jar built${RESET}"
 # ── Start / update services ────────────────────────────────────────────────────
 echo ""
 echo -e "${BOLD}[3/3] Starting services...${RESET}"
-docker compose --env-file "$ENV_FILE" up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file "$ENV_FILE" up -d --build
 
 echo ""
 echo -e "${GREEN}${BOLD}✓ Deployment complete${RESET}"
-docker compose --env-file "$ENV_FILE" ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file "$ENV_FILE" ps
