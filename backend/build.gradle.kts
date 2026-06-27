@@ -41,7 +41,6 @@ dependencies {
     // Ktor client (for Anthropic API calls)
     implementation("io.ktor:ktor-client-core:$ktor_version")
     implementation("io.ktor:ktor-client-cio:$ktor_version")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
 
     // Logging
     implementation("ch.qos.logback:logback-classic:$logback_version")
@@ -59,11 +58,13 @@ dependencies {
     // Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
-    // AWS
+    // AWS Secrets Manager
     implementation(platform("software.amazon.awssdk:bom:2.26.0"))
     implementation("software.amazon.awssdk:secretsmanager")
-    implementation("software.amazon.awssdk:sesv2")
     implementation("software.amazon.awssdk:url-connection-client")
+
+    // Email
+    implementation("org.simplejavamail:simple-java-mail:8.12.5")
 
     // Testing
     testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
