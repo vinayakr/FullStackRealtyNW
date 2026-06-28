@@ -20,7 +20,12 @@ services:
     volumes:
       - ~/.aws:/root/.aws:ro
     environment:
-      AWS_REGION: ${AWS_REGION:-us-west-2}
+      AWS_REGION: us-west-2
+      ANTHROPIC_API_KEY_SECRET: prod/fullstackrealtynw#anthropic-api-key
+      DATABASE_PASSWORD_SECRET: prod/fullstackrealtynw#db-password
+      SMTP_PASSWORD_SECRET: prod/fullstackrealtynw#smtp-password
+      SMTP_USER: vinny@fullstackrealtynw.com
+      NOTIFY_EMAIL: vinny@fullstackrealtynw.com
     depends_on:
       fluentd:
         condition: service_started
