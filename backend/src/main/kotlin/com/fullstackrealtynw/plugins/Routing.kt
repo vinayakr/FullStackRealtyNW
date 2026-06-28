@@ -7,6 +7,7 @@ import com.fullstackrealtynw.services.AnthropicService
 import com.fullstackrealtynw.services.ArticleService
 import com.fullstackrealtynw.services.ChatService
 import com.fullstackrealtynw.services.EmailService
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -33,12 +34,30 @@ fun Application.configureRouting() {
         }
     )
 
+    val siteUrl        = SecretsLoader.resolve("SITE_URL", "https://fullstackrealtynw.com")
     val articleService = ArticleService()
     val chatService    = ChatService(anthropicService)
 
     routing {
         get("/health") {
             call.respond(mapOf("status" to "ok", "service" to "Full Stack Realty NW API"))
+        }
+
+        get("/sitemap.xml") {
+            val articles = articleService.getAllArticles()
+            val staticUrls = listOf("", "/articles", "/chat")
+            val xml = buildString {
+                appendLine("""<?xml version="1.0" encoding="UTF-8"?>""")
+                appendLine("""<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">""")
+                staticUrls.forEach { path ->
+                    appendLine("  <url><loc>$siteUrl$path</loc><changefreq>weekly</changefreq></url>")
+                }
+                articles.forEach { article ->
+                    appendLine("  <url><loc>$siteUrl/articles/${article.slug}</loc><changefreq>monthly</changefreq></url>")
+                }
+                append("</urlset>")
+            }
+            call.respondText(xml, ContentType.Text.Xml)
         }
 
         route("/api") {

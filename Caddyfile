@@ -24,6 +24,10 @@ fullstackrealtynw.com, www.fullstackrealtynw.com {
         reverse_proxy backend:8080
     }
 
+    handle /sitemap.xml {
+        reverse_proxy backend:8080
+    }
+
     # Serve Vite build with SPA fallback
     handle {
         root * /var/www/html
