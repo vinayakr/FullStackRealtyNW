@@ -25,7 +25,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       DATABASE_URL: jdbc:postgresql://postgres:5432/fullstackrealtynw
       DATABASE_USER: realty_user
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-realty_password}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
