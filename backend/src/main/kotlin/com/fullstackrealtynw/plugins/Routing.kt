@@ -1,5 +1,6 @@
 package com.fullstackrealtynw.plugins
 
+import com.fullstackrealtynw.models.ContactRequest
 import com.fullstackrealtynw.routes.articleRoutes
 import com.fullstackrealtynw.routes.chatRoutes
 import com.fullstackrealtynw.secrets.SecretsLoader
@@ -9,6 +10,7 @@ import com.fullstackrealtynw.services.ChatService
 import com.fullstackrealtynw.services.EmailService
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sse.*
@@ -63,6 +65,19 @@ fun Application.configureRouting() {
         route("/api") {
             articleRoutes(articleService)
             chatRoutes(chatService)
+
+            post("/contact") {
+                val req = try {
+                    call.receive<ContactRequest>()
+                } catch (e: Exception) {
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "name, email, and message are required"))
+                }
+                if (req.name.isBlank() || req.email.isBlank() || req.message.isBlank()) {
+                    return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "name, email, and message are required"))
+                }
+                val result = emailService.sendContact(req.name, req.email, req.message)
+                call.respond(mapOf("status" to result))
+            }
         }
     }
 }

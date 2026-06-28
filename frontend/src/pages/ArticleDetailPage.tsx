@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, Tag, Loader, User } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { articlesApi } from '../api/client'
 import type { Article } from '../types'
+import { useContactModal } from '../context/ContactModalContext'
 
 function formatDate(dateStr: string) {
   try {
@@ -20,6 +21,7 @@ export default function ArticleDetailPage() {
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const openContact = useContactModal()
 
   useEffect(() => {
     if (!slug) return
@@ -107,12 +109,12 @@ export default function ArticleDetailPage() {
             <Link to="/chat" className="btn-primary">
               Try the AI Home Advisor
             </Link>
-            <a
-              href="mailto:vinny@fullstackrealtynw.com"
+            <button
+              onClick={openContact}
               className="inline-flex items-center justify-center gap-2 border-2 border-white/30 text-white hover:bg-white/10 font-semibold px-6 py-3 rounded-lg transition-colors"
             >
-              Email Vinny
-            </a>
+              Contact Vinny
+            </button>
           </div>
         </div>
       </div>

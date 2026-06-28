@@ -1,4 +1,5 @@
 import { TrendingUp, Home, Users, Star } from 'lucide-react'
+import { useContactModal } from '../context/ContactModalContext'
 
 const highlights = [
   {
@@ -24,6 +25,7 @@ const highlights = [
 ]
 
 export default function About() {
+  const openContact = useContactModal()
   return (
     <section id="about" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -51,12 +53,9 @@ export default function About() {
               commission</strong> — saving the average Pacific Northwest seller $6,000–$12,000
               compared to traditional brokerages.
             </p>
-            <a
-              href="mailto:vinny@fullstackrealtynw.com"
-              className="btn-primary"
-            >
+            <button onClick={openContact} className="btn-primary">
               Reach Out Directly
-            </a>
+            </button>
           </div>
 
           {/* Right: highlights grid */}

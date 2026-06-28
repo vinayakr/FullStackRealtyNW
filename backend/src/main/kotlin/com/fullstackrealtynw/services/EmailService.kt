@@ -23,6 +23,36 @@ class EmailService(
             .buildMailer()
     }
 
+    fun sendContact(name: String, email: String, message: String): String {
+        val body = buildString {
+            appendLine("New contact form submission from fullstackrealtynw.com")
+            appendLine("=".repeat(50))
+            appendLine()
+            appendLine("From: $name <$email>")
+            appendLine()
+            appendLine("Message:")
+            appendLine(message)
+        }
+
+        logger.info("CONTACT FORM:\n$body")
+
+        if (!enabled) return "Message received (email not configured — check backend logs)."
+
+        return try {
+            val mail = EmailBuilder.startingBlank()
+                .from("Full Stack Realty NW", smtpUser)
+                .to(notifyEmail)
+                .withSubject("Contact from $name")
+                .withPlainText(body)
+                .buildEmail()
+            mailer.sendMail(mail)
+            "Message sent."
+        } catch (e: Exception) {
+            logger.error("Failed to send contact email", e)
+            "Message received (email delivery failed — check backend logs)."
+        }
+    }
+
     fun sendLead(input: JsonObject): String {
         val name     = input["name"]?.jsonPrimitive?.content ?: "Unknown"
         val email    = input["email"]?.jsonPrimitive?.content ?: "No email provided"

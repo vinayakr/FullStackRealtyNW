@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Mail, Home } from 'lucide-react'
+import { Mail, Phone, Home } from 'lucide-react'
+import { useContactModal } from '../context/ContactModalContext'
 
 export default function Footer() {
+  const openContact = useContactModal()
+  const [showPhone, setShowPhone] = useState(false)
   return (
     <footer className="bg-navy-950 text-gray-400">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -32,9 +36,9 @@ export default function Footer() {
               <li><Link to="/chat" className="hover:text-white transition-colors">Find My Home (AI Advisor)</Link></li>
               <li><Link to="/articles" className="hover:text-white transition-colors">Articles & Resources</Link></li>
               <li>
-                <a href="mailto:vinny@fullstackrealtynw.com" className="hover:text-white transition-colors">
+                <button onClick={openContact} className="hover:text-white transition-colors">
                   Contact Vinny
-                </a>
+                </button>
               </li>
             </ul>
           </div>
@@ -42,18 +46,26 @@ export default function Footer() {
           {/* Contact */}
           <div>
             <h4 className="text-white font-semibold mb-4">Get In Touch</h4>
-            <a
-              href="mailto:vinny@fullstackrealtynw.com"
-              className="flex items-center gap-2 text-sm hover:text-white transition-colors mb-2"
-            >
-              <Mail className="w-4 h-4" />
-              vinny@fullstackrealtynw.com
-            </a>
-            <p className="text-sm mt-4">
-              Serving buyers, sellers, and investors across the
-              Pacific Northwest — Seattle, Eastside, Portland metro,
-              and beyond.
-            </p>
+            <div className="flex items-center gap-2 text-sm mb-2">
+              <Mail className="w-4 h-4 flex-shrink-0" />
+              <span>vinny@fullstackrealtynw.com</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm mb-4">
+              <Phone className="w-4 h-4 flex-shrink-0" />
+              {showPhone ? (
+                <span>425-686-9156</span>
+              ) : (
+                <button
+                  onClick={() => setShowPhone(true)}
+                  className="text-gold-400 hover:text-gold-300 transition-colors"
+                >
+                  Show phone number
+                </button>
+              )}
+            </div>
+            <button onClick={openContact} className="btn-primary text-sm py-2">
+              Send a Message
+            </button>
           </div>
         </div>
 

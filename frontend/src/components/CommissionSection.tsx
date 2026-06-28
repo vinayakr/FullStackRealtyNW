@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DollarSign, CheckCircle } from 'lucide-react'
+import { useContactModal } from '../context/ContactModalContext'
 
 const savings = [
   { price: 400000, traditional: 12000, ours: 8000 },
@@ -19,6 +20,7 @@ const perks = [
 
 export default function CommissionSection() {
   const [homePrice, setHomePrice] = useState(650000)
+  const openContact = useContactModal()
 
   const traditional = Math.round(homePrice * 0.03)
   const ours = Math.round(homePrice * 0.02)
@@ -113,9 +115,9 @@ export default function CommissionSection() {
               ))}
             </ul>
             <div className="mt-8">
-              <a href="mailto:vinny@fullstackrealtynw.com" className="btn-primary">
+              <button onClick={openContact} className="btn-primary">
                 Get a Free Home Valuation
-              </a>
+              </button>
             </div>
           </div>
         </div>

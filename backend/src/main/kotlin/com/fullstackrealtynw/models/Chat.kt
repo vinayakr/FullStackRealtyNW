@@ -36,3 +36,6 @@ data class SendMessageRequest(val content: String)
 
 @Serializable
 data class AnthropicMessage(val role: String, val content: String)
+
+@Serializable
+data class ContactRequest(val name: String, val email: String, val message: String)

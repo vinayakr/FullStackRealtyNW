@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { MessageSquare, TrendingDown, Award } from 'lucide-react'
+import { useContactModal } from '../context/ContactModalContext'
 
 export default function Hero() {
+  const openContact = useContactModal()
   return (
     <section className="relative bg-navy-900 text-white overflow-hidden">
       {/* Background pattern */}
@@ -37,13 +39,13 @@ export default function Hero() {
               <MessageSquare className="w-5 h-5" />
               Find My Perfect Home
             </Link>
-            <a
-              href="mailto:vinny@fullstackrealtynw.com"
+            <button
+              onClick={openContact}
               className="inline-flex items-center gap-2 border-2 border-white/30 text-white hover:bg-white/10 font-semibold px-8 py-4 rounded-lg transition-colors duration-200 text-base"
             >
               <Award className="w-5 h-5" />
               Talk to Vinny
-            </a>
+            </button>
           </div>
 
           {/* Stats */}

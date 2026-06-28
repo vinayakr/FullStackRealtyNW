@@ -6,6 +6,11 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+export const contactApi = {
+  submit: (data: { name: string; email: string; message: string }) =>
+    api.post('/contact', data).then((r) => r.data),
+}
+
 export const articlesApi = {
   getAll: (category?: string) =>
     api.get<ArticleSummary[]>('/articles', { params: category ? { category } : {} }).then((r) => r.data),

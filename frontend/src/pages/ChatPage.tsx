@@ -44,12 +44,7 @@ export default function ChatPage() {
                 <span className="text-gold-400 font-semibold">Prefer to talk directly?</span>
                 <br />
                 Reach Vinny at{' '}
-                <a
-                  href="mailto:vinny@fullstackrealtynw.com"
-                  className="text-gold-300 hover:text-gold-200 underline"
-                >
-                  vinny@fullstackrealtynw.com
-                </a>
+                <span className="text-gold-300">vinny@fullstackrealtynw.com</span>
               </p>
             </div>
           </div>

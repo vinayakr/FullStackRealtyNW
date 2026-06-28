@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X, Home } from 'lucide-react'
+import { useContactModal } from '../context/ContactModalContext'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
+  const openContact = useContactModal()
 
   const links = [
     { to: '/', label: 'Home' },
@@ -48,12 +50,12 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <a
-              href="mailto:vinny@fullstackrealtynw.com"
+            <button
+              onClick={openContact}
               className="ml-3 btn-primary text-sm py-2"
             >
               Contact Vinny
-            </a>
+            </button>
           </nav>
 
           {/* Mobile hamburger */}
@@ -85,12 +87,12 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
-            <a
-              href="mailto:vinny@fullstackrealtynw.com"
-              className="block mt-2 btn-primary text-sm text-center"
+            <button
+              onClick={() => { openContact(); setOpen(false) }}
+              className="block mt-2 btn-primary text-sm text-center w-full"
             >
               Contact Vinny
-            </a>
+            </button>
           </div>
         </div>
       )}
