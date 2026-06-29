@@ -2,25 +2,41 @@ package com.fullstackrealtynw.services
 
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.simplejavamail.api.mailer.config.TransportStrategy
-import org.simplejavamail.email.EmailBuilder
-import org.simplejavamail.mailer.MailerBuilder
 import org.slf4j.LoggerFactory
+import software.amazon.awssdk.regions.Region
+import software.amazon.awssdk.services.ses.SesClient
+import software.amazon.awssdk.services.ses.model.*
 
 class EmailService(
-    private val smtpUser: String,
-    private val smtpPassword: String,
+    private val fromEmail: String,
     private val notifyEmail: String,
+    private val region: String,
 ) {
     private val logger = LoggerFactory.getLogger(EmailService::class.java)
-    private val enabled = smtpPassword.isNotBlank()
 
-    private val mailer by lazy {
-        MailerBuilder
-            .withSMTPServer("smtp.gmail.com", 587, smtpUser, smtpPassword)
-            .withTransportStrategy(TransportStrategy.SMTP_TLS)
-            .withSessionTimeout(10_000)
-            .buildMailer()
+    private val ses by lazy {
+        SesClient.builder().region(Region.of(region)).build()
+    }
+
+    private fun send(subject: String, body: String): String {
+        return try {
+            ses.sendEmail(
+                SendEmailRequest.builder()
+                    .source(fromEmail)
+                    .destination(Destination.builder().toAddresses(notifyEmail).build())
+                    .message(
+                        Message.builder()
+                            .subject(Content.builder().data(subject).build())
+                            .body(Body.builder().text(Content.builder().data(body).build()).build())
+                            .build()
+                    )
+                    .build()
+            )
+            "Email sent."
+        } catch (e: Exception) {
+            logger.error("Failed to send email", e)
+            "Email delivery failed — check backend logs."
+        }
     }
 
     fun sendContact(name: String, email: String, message: String): String {
@@ -33,24 +49,8 @@ class EmailService(
             appendLine("Message:")
             appendLine(message)
         }
-
         logger.info("CONTACT FORM:\n$body")
-
-        if (!enabled) return "Message received (email not configured — check backend logs)."
-
-        return try {
-            val mail = EmailBuilder.startingBlank()
-                .from("Full Stack Realty NW", smtpUser)
-                .to(notifyEmail)
-                .withSubject("Contact from $name")
-                .withPlainText(body)
-                .buildEmail()
-            mailer.sendMail(mail)
-            "Message sent."
-        } catch (e: Exception) {
-            logger.error("Failed to send contact email", e)
-            "Message received (email delivery failed — check backend logs)."
-        }
+        return send("Contact from $name", body)
     }
 
     fun sendLead(input: JsonObject): String {
@@ -84,21 +84,6 @@ class EmailService(
         }
 
         logger.info("LEAD CAPTURED:\n$body")
-
-        if (!enabled) return "Lead captured (email not configured — check backend logs)."
-
-        return try {
-            val mail = EmailBuilder.startingBlank()
-                .from("Full Stack Realty NW", smtpUser)
-                .to(notifyEmail)
-                .withSubject("New Lead: $name")
-                .withPlainText(body)
-                .buildEmail()
-            mailer.sendMail(mail)
-            "Lead captured and email sent to Vinny."
-        } catch (e: Exception) {
-            logger.error("Failed to send lead email", e)
-            "Lead captured (email delivery failed — check backend logs)."
-        }
+        return send("New Lead: $name", body)
     }
 }

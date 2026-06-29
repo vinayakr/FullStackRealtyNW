@@ -23,7 +23,6 @@ services:
       AWS_REGION: us-west-2
       ANTHROPIC_API_KEY_SECRET: prod/fullstackrealtynw#anthropic-api-key
       DATABASE_PASSWORD_SECRET: prod/fullstackrealtynw#db-password
-      SMTP_PASSWORD_SECRET: prod/fullstackrealtynw#smtp-password
       SMTP_USER: vinayakr@fullstackrealtynw.com
       NOTIFY_EMAIL: vinny@fullstackrealtynw.com
     depends_on:

@@ -20,11 +20,11 @@ fun Application.configureRouting() {
     install(SSE)
 
     val anthropicApiKey = SecretsLoader.resolve("ANTHROPIC_API_KEY", "")
-    val smtpUser        = SecretsLoader.resolve("SMTP_USER", "vinny@fullstackrealtynw.com")
-    val smtpPassword    = SecretsLoader.resolve("SMTP_PASSWORD", "")
+    val fromEmail       = SecretsLoader.resolve("SMTP_USER", "vinny@fullstackrealtynw.com")
     val notifyEmail     = SecretsLoader.resolve("NOTIFY_EMAIL", "vinny@fullstackrealtynw.com")
+    val awsRegion       = System.getenv("AWS_REGION") ?: "us-west-2"
 
-    val emailService    = EmailService(smtpUser = smtpUser, smtpPassword = smtpPassword, notifyEmail = notifyEmail)
+    val emailService    = EmailService(fromEmail = fromEmail, notifyEmail = notifyEmail, region = awsRegion)
 
     val anthropicService = AnthropicService(
         apiKey = anthropicApiKey,

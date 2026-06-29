@@ -64,7 +64,7 @@ dependencies {
     implementation("software.amazon.awssdk:url-connection-client")
 
     // Email
-    implementation("org.simplejavamail:simple-java-mail:8.12.5")
+    implementation("software.amazon.awssdk:ses")
 
     // Testing
     testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
