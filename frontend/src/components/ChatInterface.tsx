@@ -15,7 +15,7 @@ export default function ChatInterface() {
   const [input, setInput] = useState('')
   const [isStreaming, setIsStreaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const initSession = useCallback(async () => {
@@ -34,8 +34,8 @@ export default function ChatInterface() {
   }, [initSession])
 
   useEffect(() => {
-    if (messages.length > 1) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length > 1 && messagesRef.current) {
+      messagesRef.current.scrollTo({ top: messagesRef.current.scrollHeight, behavior: 'smooth' })
     }
   }, [messages])
 
@@ -127,7 +127,7 @@ export default function ChatInterface() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto chat-scroll p-6 space-y-6">
+      <div ref={messagesRef} className="flex-1 overflow-y-auto chat-scroll p-6 space-y-6">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             {/* Avatar */}
@@ -170,7 +170,6 @@ export default function ChatInterface() {
           </div>
         )}
 
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
