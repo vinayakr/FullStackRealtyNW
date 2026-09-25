@@ -69,6 +69,7 @@ class ChatService(private val anthropicService: AnthropicService) {
         sessionId: String,
         userMessage: String,
         onChunk: suspend (String) -> Unit,
+        onLeadCaptured: suspend () -> Unit = {},
     ) {
         saveMessage(sessionId, "user", userMessage)
         val history = getAnthropicHistory(sessionId)
@@ -76,6 +77,7 @@ class ChatService(private val anthropicService: AnthropicService) {
         anthropicService.streamCompletion(
             messages = history,
             onChunk = onChunk,
+            onLeadCaptured = onLeadCaptured,
             onComplete = { fullResponse ->
                 saveMessage(sessionId, "assistant", fullResponse)
             },

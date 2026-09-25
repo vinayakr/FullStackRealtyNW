@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { X, Mail, Phone, CheckCircle } from 'lucide-react'
 import { contactApi } from '../api/client'
+import { trackLeadConversion } from '../analytics'
 
 interface Props {
   onClose: () => void
@@ -18,6 +19,7 @@ export default function ContactModal({ onClose }: Props) {
     setStatus('sending')
     try {
       await contactApi.submit({ name, email, message })
+      trackLeadConversion()
       setStatus('sent')
     } catch {
       setStatus('error')

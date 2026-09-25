@@ -31,6 +31,7 @@ export const chatApi = {
     sessionId: string,
     content: string,
     onChunk: (text: string) => void,
+    onLeadCaptured: () => void,
     onDone: () => void,
     onError: (err: string) => void
   ) => {
@@ -68,6 +69,7 @@ export const chatApi = {
           try {
             const parsed = JSON.parse(data)
             if (parsed.text) onChunk(parsed.text)
+            if (parsed.event === 'lead_captured') onLeadCaptured()
             if (parsed.error) onError(parsed.error)
           } catch {
             // skip

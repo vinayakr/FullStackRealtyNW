@@ -3,6 +3,7 @@ import { Send, Bot, User, RefreshCw, MessageSquare } from 'lucide-react'
 import { chatApi } from '../api/client'
 import type { StreamingMessage } from '../types'
 import ReactMarkdown from 'react-markdown'
+import { trackLeadConversion } from '../analytics'
 
 const WELCOME_MESSAGE: StreamingMessage = {
   role: 'assistant',
@@ -66,6 +67,7 @@ export default function ChatInterface() {
           return updated
         })
       },
+      trackLeadConversion,
       () => {
         setMessages((prev) => {
           const updated = [...prev]

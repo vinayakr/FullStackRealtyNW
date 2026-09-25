@@ -76,18 +76,20 @@ class AnthropicService(
     suspend fun streamCompletion(
         messages: List<AnthropicMessage>,
         onChunk: suspend (String) -> Unit,
+        onLeadCaptured: suspend () -> Unit,
         onComplete: suspend (String) -> Unit,
     ) {
         val apiMessages = messages.map { buildJsonObject {
             put("role", it.role)
             put("content", it.content)
         }}
-        streamInternal(apiMessages, onChunk, onComplete, withTools = toolExecutor != null)
+        streamInternal(apiMessages, onChunk, onLeadCaptured, onComplete, withTools = toolExecutor != null)
     }
 
     private suspend fun streamInternal(
         messages: List<JsonObject>,
         onChunk: suspend (String) -> Unit,
+        onLeadCaptured: suspend () -> Unit,
         onComplete: suspend (String) -> Unit,
         withTools: Boolean,
     ) {
@@ -189,6 +191,10 @@ class AnthropicService(
                     "Tool error: ${e.message}"
                 }
 
+                if (currentToolName == "capture_lead" && toolResult == "Email sent.") {
+                    onLeadCaptured()
+                }
+
                 val assistantContent = buildJsonArray {
                     if (assistantTextBeforeTool.isNotEmpty()) addJsonObject {
                         put("type", "text"); put("text", assistantTextBeforeTool.toString())
@@ -214,7 +220,7 @@ class AnthropicService(
                         })
                     }
                 )
-                streamInternal(followUpMessages, onChunk, onComplete, withTools = false)
+                streamInternal(followUpMessages, onChunk, onLeadCaptured, onComplete, withTools = false)
             } else {
                 onComplete(fullText.toString())
             }

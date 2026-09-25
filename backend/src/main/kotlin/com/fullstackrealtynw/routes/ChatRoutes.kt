@@ -35,10 +35,18 @@ fun Route.chatRoutes(chatService: ChatService) {
                 ?: run { close(); return@sse }
 
             try {
-                chatService.streamReply(sessionId, userMessage) { chunk ->
-                    val data = Json.encodeToString(buildJsonObject { put("text", chunk) })
-                    send(ServerSentEvent(data = data))
-                }
+                chatService.streamReply(
+                    sessionId = sessionId,
+                    userMessage = userMessage,
+                    onChunk = { chunk ->
+                        val data = Json.encodeToString(buildJsonObject { put("text", chunk) })
+                        send(ServerSentEvent(data = data))
+                    },
+                    onLeadCaptured = {
+                        val data = Json.encodeToString(buildJsonObject { put("event", "lead_captured") })
+                        send(ServerSentEvent(data = data))
+                    },
+                )
                 send(ServerSentEvent(data = "[DONE]"))
             } catch (e: Exception) {
                 val errData = Json.encodeToString(buildJsonObject { put("error", e.message ?: "Stream error") })
@@ -70,11 +78,20 @@ fun Route.chatRoutes(chatService: ChatService) {
 
             call.respondTextWriter(contentType = ContentType.Text.EventStream) {
                 try {
-                    chatService.streamReply(sessionId, request.content) { chunk ->
-                        val data = Json.encodeToString(buildJsonObject { put("text", chunk) })
-                        write("data: $data\n\n")
-                        flush()
-                    }
+                    chatService.streamReply(
+                        sessionId = sessionId,
+                        userMessage = request.content,
+                        onChunk = { chunk ->
+                            val data = Json.encodeToString(buildJsonObject { put("text", chunk) })
+                            write("data: $data\n\n")
+                            flush()
+                        },
+                        onLeadCaptured = {
+                            val data = Json.encodeToString(buildJsonObject { put("event", "lead_captured") })
+                            write("data: $data\n\n")
+                            flush()
+                        },
+                    )
                     write("data: [DONE]\n\n")
                     flush()
                 } catch (_: java.io.IOException) {
