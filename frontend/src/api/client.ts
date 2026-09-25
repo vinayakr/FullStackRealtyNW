@@ -11,6 +11,11 @@ export const contactApi = {
     api.post('/contact', data).then((r) => r.data),
 }
 
+export const marketingApi = {
+  optIn: (data: { email: string; name?: string; interests?: string[] }) =>
+    api.post('/marketing/opt-in', data).then((r) => r.data),
+}
+
 export const articlesApi = {
   getAll: (category?: string) =>
     api.get<ArticleSummary[]>('/articles', { params: category ? { category } : {} }).then((r) => r.data),

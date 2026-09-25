@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import ChatPage from './pages/ChatPage'
 import ArticlesPage from './pages/ArticlesPage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
+import SubscribePage from './pages/SubscribePage'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import { ContactModalProvider } from './context/ContactModalContext'
@@ -19,6 +20,7 @@ export default function App() {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/articles" element={<ArticlesPage />} />
               <Route path="/articles/:slug" element={<ArticleDetailPage />} />
+              <Route path="/subscribe" element={<SubscribePage />} />
             </Routes>
           </main>
           <Footer />

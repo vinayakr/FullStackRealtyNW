@@ -40,6 +40,7 @@ export default function Footer() {
                   Contact Vinny
                 </button>
               </li>
+              <li><Link to="/subscribe" className="hover:text-white transition-colors">Subscribe to Updates</Link></li>
             </ul>
           </div>
 

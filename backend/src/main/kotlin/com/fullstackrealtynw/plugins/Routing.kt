@@ -3,6 +3,7 @@ package com.fullstackrealtynw.plugins
 import com.fullstackrealtynw.models.ContactRequest
 import com.fullstackrealtynw.routes.articleRoutes
 import com.fullstackrealtynw.routes.chatRoutes
+import com.fullstackrealtynw.routes.marketingOptInRoutes
 import com.fullstackrealtynw.secrets.SecretsLoader
 import com.fullstackrealtynw.services.AnthropicService
 import com.fullstackrealtynw.services.ArticleService
@@ -65,6 +66,7 @@ fun Application.configureRouting() {
         route("/api") {
             articleRoutes(articleService)
             chatRoutes(chatService)
+            marketingOptInRoutes()
 
             post("/contact") {
                 val req = try {
